@@ -4,7 +4,8 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import axios from "axios";
-import { Button, Modal } from "antd";
+import { Button, Modal, Form, Input } from "antd";
+import { CloseOutlined, EditOutlined } from "@ant-design/icons";
 
 const Brands: React.FC = () => {
   const [data, setData] = useState<{
@@ -12,6 +13,9 @@ const Brands: React.FC = () => {
     pagination: IPagination;
   }>();
   const [currentPage, setCurrentPage] = useState(1);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [form] = Form.useForm();
+
   const navigate = useNavigate();
 
   const handlePaginationChange = (page: number) => {
@@ -43,22 +47,19 @@ const Brands: React.FC = () => {
     fetchData(1);
   }, []);
 
-  const deleteItem = async (itemId: number) => {
+  const handleDeleteItem = async (itemId: number) => {
     try {
       await axios.delete(`/brand/delete/${itemId}`, {
         headers: {
           Authorization: `Bearer ${sessionStorage.getItem("accessToken")}`,
         },
       });
-      // O'chirilgan elementni data ob'ektidan o'chirib tashlash
-      setData(
-        (prevData: { brands: IBrands; pagination: IPagination } | any) => ({
-          ...prevData,
-          brands: prevData!.brands.filter(
-            (brand: IBrands) => brand.id !== itemId
-          ),
-        })
-      );
+      setData((prevData: { brands: IBrands } | any) => ({
+        ...prevData,
+        brands: prevData!.brands.filter(
+          (brand: IBrands) => brand.id !== itemId
+        ),
+      }));
     } catch (error: any) {
       toast(error.request, { type: "error" });
     } finally {
@@ -66,22 +67,60 @@ const Brands: React.FC = () => {
     }
   };
 
+  const handleAddItem = async () => {
+    try {
+      const values = await form.validateFields();
+      await axios.post(
+        "/brand/add",
+        {
+          name_uz: values.name_uz,
+          name_ru: values.name_ru,
+          image: values.image,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${sessionStorage.getItem("accessToken")}`,
+          },
+        }
+      );
+      setModalVisible(false);
+      form.resetFields();
+      toast("Item is added successfully!", { type: "success" });
+      fetchData(currentPage);
+    } catch (error) {
+      toast("Failed to add item", { type: "error" });
+      console.log(error);
+    }
+  };
+
   return (
     <div className="w-full h-[calc(100vh-11rem)] relative">
+      <Button
+        type="primary"
+        className="bg-blue-600"
+        onClick={() => setModalVisible(true)}
+      >
+        ADD
+      </Button>
       {data && (
         <div className="">
           <ul>
             {data.brands.map((brand, index: number) => (
-              <li key={index}>
-                {brand.name_uz}
-                <Button
-                  type="default"
-                  className="bg-red-500"
-                  onClick={() => deleteItem(brand.id)}
-                >
-                  X
-                </Button>
-              </li>
+              <div className="flex justify-between mb-2">
+                <li key={index}> {brand.name_uz} </li>
+                <div className="flex flex-row gap-2">
+                  <Button type="text" className="bg-yellow-500">
+                    <EditOutlined />
+                  </Button>
+                  <Button
+                    type="default"
+                    className="bg-red-500"
+                    onClick={() => handleDeleteItem(brand.id)}
+                  >
+                    <CloseOutlined />
+                  </Button>
+                </div>
+              </div>
             ))}
           </ul>
           <div>
@@ -94,6 +133,40 @@ const Brands: React.FC = () => {
           </div>
         </div>
       )}
+      <Modal
+        title="Add Item"
+        visible={modalVisible}
+        onCancel={() => setModalVisible(false)}
+        onOk={handleAddItem}
+      >
+        <Form form={form}>
+          <Form.Item
+            name="name_uz"
+            label="Name (Uzbek)"
+            rules={[
+              { required: true, message: "Please enter the name in Uzbek" },
+            ]}
+          >
+            <Input />
+          </Form.Item>
+          <Form.Item
+            name="name_ru"
+            label="Name (Russian)"
+            rules={[
+              { required: true, message: "Please enter the name in Russian" },
+            ]}
+          >
+            <Input />
+          </Form.Item>
+          <Form.Item
+            name="image"
+            label="Image"
+            rules={[{ required: true, message: "Please enter the image URL" }]}
+          >
+            <Input />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 };
