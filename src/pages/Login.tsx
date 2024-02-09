@@ -14,6 +14,8 @@ const Login: React.FC = () => {
   // const aToken: string | null = sessionStorage.getItem("accessToken");
   const rToken: string | null = sessionStorage.getItem("refreshToken");
 
+  const currentPage = sessionStorage.getItem("currentPage");
+
   const navigate = useNavigate();
 
   //Handle Login
@@ -55,8 +57,10 @@ const Login: React.FC = () => {
         sessionStorage.setItem("accessToken", data.accessToken);
 
         toast("New token received", { type: "success" });
-        sessionStorage.setItem("currentPage", "dashboard");
-        navigate("/admin");
+
+        currentPage === "dashboard"
+          ? navigate("/admin")
+          : navigate(`/admin/${currentPage}`);
       } else {
         toast(data.error, { type: "warning" });
         sessionStorage.removeItem("accessToken");
